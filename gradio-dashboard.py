@@ -10,16 +10,21 @@ import gradio as gr
 load_dotenv()
 
 # load the cleaned df
-books = pd.read_csv('books_with_emotion_scores.csv')
+books = pd.read_csv('./data/books_with_emotion_scores.csv')
 
 # I'll use the thumbnail for the display
-books["large_thumbnail"] = books["large_thumbnail"] + "&fife=w800"
+books["large_thumbnail"] = books["thumbnail"] + "&fife=w800"
 books["large_thumbnail"] = np.where(books["large_thumbnail"].isnull(), "cover-not-found.jpg", books["large_thumbnail"])
 
-raw_documents = TextLoader('./data/tagged_descriptions.txt').load()
+raw_documents = TextLoader('./data/tagged_descriptions.txt', encoding='utf-8').load()
+
 text_splitter = CharacterTextSplitter(separator="\n", chunk_size=1500, chunk_overlap=0)
 documents = text_splitter.split_documents(raw_documents)
-db_books = Chroma.from_documents(documents, MistralAIEmbeddings())
+embedding = MistralAIEmbeddings(
+    model="mistral-embed",
+    api_key= "7pe3roabiqOZV3bUCcVsevNwX3D3pyxL"
+)
+db_books = Chroma.from_documents(documents, embedding)
 
 # semantic recommendation retrival
 def retrieve_semantic_recommendation(
@@ -71,5 +76,30 @@ def recommend_books(query: str, category: str, tone: str):
 
         caption = f"{row['title']} by {authors_str}: {truncated_description}"
         results.append((row["large_thumbnail"], caption))
-        
+
     return results
+
+categories = ['All'] + sorted(books['simple_categories'].unique())
+tones = ["All"] + ["Happy", "Sad", "Angry", "Suspenseful", "Surprising"]
+
+with gr.Blocks(theme = gr.themes.Glass()) as dashboard:
+    gr.Markdown("# BayaBooks Recommendation Dashboard")
+    gr.Markdown("Get book recommendations based on your interests and mood!")
+
+    with gr.Row():
+        user_query = gr.Textbox(placeholder="e.g., A Story about success", label="Please enter a description of what you're looking for:", lines=3)
+        category_dropdown = gr.Dropdown(choices=categories, value="All", label="Select Book Category:")
+        tone_dropdown = gr.Dropdown(choices=tones, value="All", label="Select Desired Tone/Mood:")
+        submit_button = gr.Button("Get Recommendations")
+
+        gr.Markdown("### Recommended Books:")
+        output_gallery = gr.Gallery(label="Recommended Books", columns = 8, rows = 2, elem_id="gallery")
+
+    submit_button.click(
+        fn=recommend_books,
+        inputs=[user_query, category_dropdown, tone_dropdown],
+        outputs=output_gallery
+    )
+
+if __name__ == "__main__":
+    dashboard.launch(share=True)
