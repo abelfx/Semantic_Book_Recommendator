@@ -49,7 +49,8 @@ pip install -r requirements.txt
 ```
 
 2️⃣ Run the Gradio dashboard
-```python gradio-dashboard.py
+```
+python gradio-dashboard.py
 ```
 
 3️⃣ Open the provided local URL in your browser
@@ -72,3 +73,4 @@ Improve recommendation ranking with user feedback
 - Abel Tesfa
 - Software Engineering Student
 - GitHub: abelfx
+
